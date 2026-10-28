@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Элементы решения/">
+    <File Path="docker-compose.yml" />
+    <File Path="Dockerfile" />
+    <File Path="README.md" />
+    <File Path="README.RU.md" />
+  </Folder>
+  <Project Path="ChatClient/ChatClient.csproj" Id="51f660ca-1aa0-47e5-a527-8eb1ed2cf63d">
+    <Deploy Solution="Debug|*" />
+  </Project>
+  <Project Path="ChatServer.Tests/ChatServer.Tests.csproj" Id="139fa14f-286e-4906-a833-c7fab9232017" />
+  <Project Path="ChatServer/ChatServer.csproj" />
+</Solution>

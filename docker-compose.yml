@@ -1,0 +1,40 @@
+﻿services: 
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: friends_chat_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: friends_chat_db
+      POSTGRES_USER: chat_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chat_admin -d friends_chat_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chat_server:
+    image: chat-server-backend
+    container_name: friends_chat_server
+    restart: always
+    build:
+      context: ..
+      dockerfile: ChatServer/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres_db;Port=5432;Database=friends_chat_db;Username=chat_admin;Password=${DB_PASSWORD}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=ChatServer
+      - Jwt__Audience=ChatClient
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

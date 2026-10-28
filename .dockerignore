@@ -1,0 +1,14 @@
+**/.vs/
+**/.vscode/
+**/.git/
+
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+**/*.log
+**/logs/
+
+.env
+ChatServer/appsettings.Development.json
