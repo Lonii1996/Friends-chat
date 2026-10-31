@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Net.Http.Json;
 using ChatClient.DTOs;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Maui.Storage;
 
 namespace ChatClient;
 
@@ -9,7 +10,7 @@ public partial class ChatPage : ContentPage
 {
     private readonly int _currentUserId;
     private readonly string _currentUsername;
-    private readonly string _token;
+    private string _token;
 
     private static string BaseAddress = DeviceInfo.Platform == DevicePlatform.Android
 
@@ -37,7 +38,19 @@ public partial class ChatPage : ContentPage
         _currentUserId = userId;
         _currentUsername = username;
         _token = token;
-        _httpClient = new HttpClient();
+        
+
+        var baseHandler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true
+        };
+        
+        var authHandler = new ChatClient.Handlers.AuthHttpMessageHandler
+        {
+            InnerHandler = baseHandler
+        };
+        _httpClient = new HttpClient(authHandler);
+
 
         MessagesCollectionView.ItemsSource = Messages;
 
@@ -50,7 +63,21 @@ public partial class ChatPage : ContentPage
     private async void InitializeChatAsync()
     {
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl(HubUrl, options => { options.AccessTokenProvider = () => Task.FromResult(_token)!; })
+            .WithUrl(HubUrl, options =>
+            {
+                
+                options.AccessTokenProvider = async () =>
+                {
+                  
+                    if (IsTokenExpired(_token))
+                    {
+                        await RefreshTokensViaHttpClientAsync();
+                    }
+
+                    _token = await SecureStorage.Default.GetAsync("AccessToken") ?? _token;
+                    return _token;
+                };
+            })
             .WithAutomaticReconnect()
             .AddMessagePackProtocol()
             .Build();
@@ -101,7 +128,9 @@ public partial class ChatPage : ContentPage
             }
 
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _token);
+
+            var currentToken = await SecureStorage.Default.GetAsync("AccessToken") ?? _token;
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", currentToken);
 
             var response = await _httpClient.SendAsync(request);
 
@@ -152,6 +181,52 @@ public partial class ChatPage : ContentPage
             _isLoadingHistory = false;
         }
     }
+
+    private bool IsTokenExpired(string? token)
+    {
+        if (string.IsNullOrEmpty(token)) return true;
+        try
+        {
+            var parts = token.Split('.');
+            if (parts.Length < 2) return true;
+
+            var payload = parts[1];
+            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            var jsonBytes = Convert.FromBase64String(payload);
+
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonBytes);
+            if (doc.RootElement.TryGetProperty("exp", out var expCell))
+            {
+                var exp = expCell.GetInt64();
+                var expirationTime = DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
+
+                
+                return expirationTime < DateTime.UtcNow.AddSeconds(30);
+            }
+        }
+        catch
+        {
+            return true;
+        }
+        return true;
+    }
+
+    private async Task RefreshTokensViaHttpClientAsync()
+    {
+        try
+        {
+            var pingRequest = new HttpRequestMessage(HttpMethod.Get, $"{BaseAddress}/api/messages?count=1");
+            var currentToken = await SecureStorage.Default.GetAsync("AccessToken") ?? _token;
+            pingRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", currentToken);
+
+            await _httpClient.SendAsync(pingRequest);
+        }
+        catch { }
+        
+    }
+
+
+
 
 
     private async void OnMessagesScrolled(object? sender, ItemsViewScrolledEventArgs e)

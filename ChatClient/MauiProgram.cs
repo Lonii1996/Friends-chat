@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ChatClient.Handlers;
+using Microsoft.Extensions.Logging;
 
 namespace ChatClient
 {
@@ -18,6 +19,28 @@ namespace ChatClient
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
+
+            
+            builder.Services.AddTransient<AuthHttpMessageHandler>();
+
+            
+            builder.Services.AddSingleton(sp =>
+            {
+                var handler = sp.GetRequiredService<AuthHttpMessageHandler>();
+
+                
+                var httpClient = new HttpClient(handler)
+                {
+                    BaseAddress = new Uri(DeviceInfo.Platform == DevicePlatform.Android
+                        ? "http://10.0.2.2:8080"
+                        : "http://localhost:8080")
+                };
+
+                return httpClient;
+            });
+
+
+
 
             return builder.Build();
         }
