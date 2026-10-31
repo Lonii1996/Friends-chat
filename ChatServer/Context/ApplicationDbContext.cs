@@ -15,6 +15,7 @@ namespace ChatServer.Context
         }
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Message> Messages { get; set; }
+        public DbSet<UserRefreshToken> UsersRefreshToken { get; set; } = null!;
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -29,6 +30,10 @@ namespace ChatServer.Context
 
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<UserRefreshToken>()
+                .HasIndex(t => t.TokenHesh)
                 .IsUnique();
 
         }
