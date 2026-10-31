@@ -81,7 +81,7 @@ namespace ChatServer.Services
             {
 
                 Id = newMessage.Id,
-                UserName = userName,
+                UserName = userName!,
                 Text = newMessage.Text,
                 SentAt = newMessage.SentAt
             };

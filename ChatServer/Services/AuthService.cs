@@ -114,6 +114,58 @@ namespace ChatServer.Services
         }
 
 
+        public async Task<AuthResult> RefreshTokenAsync(RefreshTokenDto refreshToken) 
+        {
+            var incomingHash = _hashService.Hash(refreshToken.RefreshToken);
+
+            var savedRefreshTokenHash = await _context.UsersRefreshToken
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.TokenHash == incomingHash);
+
+            if (savedRefreshTokenHash == null) 
+            {
+                return new AuthResult { IsSuccess = false, Message = "Невалидный рефреш-токен" };
+            }
+            
+            var user = savedRefreshTokenHash.User;
+
+            if (savedRefreshTokenHash.IsExpired)
+            {
+                _context.UsersRefreshToken.Remove(savedRefreshTokenHash);
+                await _context.SaveChangesAsync();
+
+                return new AuthResult { IsSuccess = false, Message = "Срок действия сессии истек" };
+                
+            }
+
+            _context.UsersRefreshToken.Remove(savedRefreshTokenHash);
+
+            var newAccessToken = _jwtProvider.GenerateAccessToken(user!);
+            var newRefreshToken = _refreshTokenGenerator.GenerateRefreshToken();
+            var newRefreshTokenHash = _hashService.Hash(newRefreshToken);
+
+            var userRefreshToken = new UserRefreshToken
+            {
+                TokenHash = newRefreshTokenHash,
+                UserId = user!.Id,
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
+
+            _context.UsersRefreshToken.Add(userRefreshToken);
+            await _context.SaveChangesAsync();
+
+            return new AuthResult
+            {
+                IsSuccess = true,
+                Message = "Сессия успешно обновлена",
+                UserId = user.Id,
+                Username = user.Name,
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+            };
+        }
+
+
 
 
         

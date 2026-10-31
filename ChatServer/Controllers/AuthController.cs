@@ -3,6 +3,7 @@ using ChatServer.Entities;
 using ChatServer.Interfaces;
 using ChatServer.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChatServer.Controllers
@@ -45,6 +46,19 @@ namespace ChatServer.Controllers
                 return Ok(result);
            
 
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto model) 
+        {
+            var result = await _authService.RefreshTokenAsync(model);
+
+            if (!result.IsSuccess)
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(result);
         }
     
 
