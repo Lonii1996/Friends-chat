@@ -82,6 +82,8 @@ namespace ChatServer
             builder.Services.AddSingleton<IJwtProvider, JwtProvider>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IMessageService, MessageService>();
+            builder.Services.AddTransient<IHashService, HashService>();
+            builder.Services.AddTransient<IRefreshTokenGenerator, RefreshTokenGenerator>();
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

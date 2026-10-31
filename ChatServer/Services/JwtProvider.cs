@@ -24,7 +24,7 @@ namespace ChatServer.Services
         }
 
 
-        public string GenerateToken(User user)
+        public string GenerateAccessToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(_jwtOptions.Key!);

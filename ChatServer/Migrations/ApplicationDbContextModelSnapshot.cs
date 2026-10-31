@@ -91,7 +91,7 @@ namespace ChatServer.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("TokenHesh")
+                    b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -100,7 +100,7 @@ namespace ChatServer.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TokenHesh")
+                    b.HasIndex("TokenHash")
                         .IsUnique();
 
                     b.HasIndex("UserId");

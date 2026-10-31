@@ -33,7 +33,7 @@ namespace ChatServer.Context
                 .IsUnique();
 
             modelBuilder.Entity<UserRefreshToken>()
-                .HasIndex(t => t.TokenHesh)
+                .HasIndex(t => t.TokenHash)
                 .IsUnique();
 
         }

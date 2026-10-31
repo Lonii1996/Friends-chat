@@ -12,14 +12,18 @@ namespace ChatServer.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IJwtProvider _jwtProvider;
+        private readonly IHashService _hashService;
+        private readonly IRefreshTokenGenerator _refreshTokenGenerator;
      
 
         
 
-        public AuthService(ApplicationDbContext context, IJwtProvider jwtProvider)
+        public AuthService(ApplicationDbContext context, IJwtProvider jwtProvider, IHashService hashService, IRefreshTokenGenerator refreshTokenGenerator)
         {
             _context = context;
             _jwtProvider = jwtProvider;
+            _hashService = hashService;
+            _refreshTokenGenerator = refreshTokenGenerator;
         }
 
         public async Task<AuthResult> RegisterAsync(RegisterDto model)
@@ -76,7 +80,25 @@ namespace ChatServer.Services
                 return new AuthResult { IsSuccess = false, Message = "Не верный пароль" };
             }
 
+
+
+            var accessToken = _jwtProvider.GenerateAccessToken(user);
+            var refreshToken = _refreshTokenGenerator.GenerateRefreshToken();
+            var refreshTokenHash = _hashService.Hash(refreshToken);
+
+
+            var userRefreshToken = new UserRefreshToken
+            {
+                TokenHash = refreshTokenHash,
+                UserId = user.Id,
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
             
+            _context.UsersRefreshToken.Add(userRefreshToken);
+            await _context.SaveChangesAsync();
+
+
+
 
             return new AuthResult
             {
@@ -84,7 +106,8 @@ namespace ChatServer.Services
                 Message = "Вход выполнен успешно!",
                 UserId = user.Id,
                 Username = user.Name,
-                Token = _jwtProvider.GenerateToken(user)
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
 
 
             };

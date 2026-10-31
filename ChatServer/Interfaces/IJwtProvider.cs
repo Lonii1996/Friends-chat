@@ -7,7 +7,7 @@ namespace ChatServer.Interfaces
     public interface IJwtProvider
     {
 
-        public string GenerateToken(User user);
+        public string GenerateAccessToken(User user);
         
 
 

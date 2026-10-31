@@ -7,7 +7,7 @@ namespace ChatServer.Entities
         public int Id { get; init; }
 
         [Required]
-        public string TokenHesh { get; set; } = string.Empty;
+        public string TokenHash { get; set; } = string.Empty;
 
         public DateTime ExpiresAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
