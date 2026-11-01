@@ -2,9 +2,12 @@
 using ChatServer.DTOs;
 using ChatServer.Entities;
 using ChatServer.Interfaces;
+using ChatServer.Options;
 using ChatServer.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -19,6 +22,7 @@ namespace ChatServer.Tests
         private readonly Mock<IHashService> _mockHash;
         private readonly Mock<IRefreshTokenGenerator> _mockRefresh;
         private readonly AuthService _authService;
+        private readonly Mock<ILogger<AuthService>> _mockLogger;
 
 
         public AuthServiceTest()
@@ -29,10 +33,20 @@ namespace ChatServer.Tests
             _mockJwt = new Mock<IJwtProvider>();
             _mockHash = new Mock<IHashService>();
             _mockRefresh = new Mock<IRefreshTokenGenerator>();
-            _authService = new AuthService(_context, _mockJwt.Object, _mockHash.Object, _mockRefresh.Object);
+            _mockLogger = new Mock<ILogger<AuthService>>();
+
+            var jwtOptions = new JwtOptions
+            {
+                AccessTokenExpirationMinutes = 15,
+                RefreshTokenExpirationDays = 30
+            };
+            var mockOptions = Microsoft.Extensions.Options.Options.Create(jwtOptions);
+
+            _authService = new AuthService(_context, _mockJwt.Object, _mockHash.Object, _mockRefresh.Object, mockOptions, _mockLogger.Object);
 
             _mockHash.Setup(h => h.Hash(It.IsAny<string>())).Returns("fake_hash_value");
 
+            
         }
 
 

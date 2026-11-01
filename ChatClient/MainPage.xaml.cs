@@ -76,7 +76,7 @@ public partial class MainPage : ContentPage
             if (response.IsSuccessStatusCode && result != null)
             {
                 
-                Application.Current.MainPage = new NavigationPage(new ChatPage(result.UserId ?? 0, result.Username ?? "User", result.Token ?? ""));
+                Application.Current.MainPage = new NavigationPage(new ChatPage(result.UserId ?? 0, result.Username ?? "User", result.AccessToken ?? ""));
             }
             else
             {
@@ -136,5 +136,6 @@ public class AuthResponse
     public int? UserId { get; set; }
     public string? Username { get; set; }
     
-    public string? Token { get; set; }
+    public string? AccessToken { get; set; }
+    public string? RefreshToken { get; set; }
 }
