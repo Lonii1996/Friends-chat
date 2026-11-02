@@ -27,7 +27,8 @@ namespace ChatServer.Services
 
             var messages = await query
                 
-                .OrderByDescending(m => m.SentAt)
+                .AsNoTracking()
+                .OrderByDescending(m => m.Id)
                 .Take(count)
                 .Select(m => new MessageHistoryDto
                 {
@@ -81,7 +82,7 @@ namespace ChatServer.Services
             {
 
                 Id = newMessage.Id,
-                UserName = userName,
+                UserName = userName!,
                 Text = newMessage.Text,
                 SentAt = newMessage.SentAt
             };

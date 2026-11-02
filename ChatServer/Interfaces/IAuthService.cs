@@ -7,6 +7,7 @@ namespace ChatServer.Interfaces
     {
         Task<AuthResult> RegisterAsync(RegisterDto model);
         Task<AuthResult> LoginAsync(LoginDto model);
+        Task<AuthResult> RefreshTokenAsync(RefreshTokenDto model);
     }
 
     public class AuthResult 
@@ -15,6 +16,7 @@ namespace ChatServer.Interfaces
         public string Message { get; set; } = string.Empty;
         public int? UserId { get; set; }
         public string? Username { get; set; }
-        public string? Token { get; set; }
+        public string? AccessToken { get; set; }
+        public string? RefreshToken { get; set; }
     }
 }

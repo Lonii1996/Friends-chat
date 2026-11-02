@@ -31,3 +31,5 @@ mono_crash.*
 ChatServer/appsettings.Development.json
 .env
 secrets.json
+
+repomix-output.xml
