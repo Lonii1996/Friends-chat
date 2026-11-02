@@ -4,11 +4,14 @@ using ChatServer.Entities;
 using ChatServer.Interfaces;
 using ChatServer.Options;
 using ChatServer.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Security.Cryptography;
+using System.Text;
 using Xunit;
 
 
@@ -19,10 +22,11 @@ namespace ChatServer.Tests
 
         private readonly ApplicationDbContext _context;
         private readonly Mock<IJwtProvider> _mockJwt;
-        private readonly Mock<IHashService> _mockHash;
-        private readonly Mock<IRefreshTokenGenerator> _mockRefresh;
+        
         private readonly AuthService _authService;
         private readonly Mock<ILogger<AuthService>> _mockLogger;
+        private readonly IHashService _hashService;
+        private readonly IRefreshTokenGenerator _refreshTokenGenerator;
 
 
         public AuthServiceTest()
@@ -31,9 +35,12 @@ namespace ChatServer.Tests
             
             _context = new ApplicationDbContext(options);
             _mockJwt = new Mock<IJwtProvider>();
-            _mockHash = new Mock<IHashService>();
-            _mockRefresh = new Mock<IRefreshTokenGenerator>();
+            
             _mockLogger = new Mock<ILogger<AuthService>>();
+            _hashService = new HashService();
+            _refreshTokenGenerator = new RefreshTokenGenerator();
+
+            
 
             var jwtOptions = new JwtOptions
             {
@@ -42,10 +49,9 @@ namespace ChatServer.Tests
             };
             var mockOptions = Microsoft.Extensions.Options.Options.Create(jwtOptions);
 
-            _authService = new AuthService(_context, _mockJwt.Object, _mockHash.Object, _mockRefresh.Object, mockOptions, _mockLogger.Object);
+            _authService = new AuthService(_context, _mockJwt.Object, _hashService, _refreshTokenGenerator, mockOptions, _mockLogger.Object);
 
-            _mockHash.Setup(h => h.Hash(It.IsAny<string>())).Returns("fake_hash_value");
-
+           
             
         }
 
@@ -173,6 +179,105 @@ namespace ChatServer.Tests
             Assert.False(result.IsSuccess);
             Assert.Equal("Пользователь не найден", result.Message); 
         }
+
+        
+
+
+        [Fact]
+        public async Task RefreshTokenAsync_ShouldReturnSuccess_AndRotateTokens_WhenTokenIsValid()
+        {
+            var refreshToken = _refreshTokenGenerator.GenerateRefreshToken();
+            var refreshTokenHash = _hashService.Hash(refreshToken);
+
+            var testUser = new User
+            {
+                Name = "TestName",
+                PasswordHash = "TestPasswordHash"
+            };
+
+            var testUserRefreshToken = new UserRefreshToken
+            {
+                TokenHash = refreshTokenHash,
+                User = testUser,
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
+
+            
+            _context.Add(testUserRefreshToken);
+            await _context.SaveChangesAsync();
+
+            var refreshTokenDto = new RefreshTokenDto
+            {
+                RefreshToken = refreshToken
+            };
+
+            
+            var result = await _authService.RefreshTokenAsync(refreshTokenDto);
+
+            var newRefreshTokenHash = _hashService.Hash(result.RefreshToken!);
+
+            var newTokenHashInDb = await _context.UsersRefreshToken.AsNoTracking().FirstOrDefaultAsync(r => r.TokenHash == newRefreshTokenHash);
+
+            var invalidRefreshTokenHash = await _context.UsersRefreshToken.AsNoTracking().FirstOrDefaultAsync(r => r.TokenHash == refreshTokenHash);
+
+
+            Assert.True(result.IsSuccess);
+            Assert.Null(invalidRefreshTokenHash);
+            Assert.NotNull(newTokenHashInDb);
+
+        }
+
+
+
+
+
+
+        [Fact]
+        public async Task RefreshTokenAsync_ShouldRejectReusedToken_AfterRotation()
+        {
+            var refreshToken = _refreshTokenGenerator.GenerateRefreshToken();
+            var refreshTokenHash = _hashService.Hash(refreshToken);
+
+            var testUser = new User
+            {
+                Name = "TestName",
+                PasswordHash = "TestPasswordHash"
+            };
+
+            var testUserRefreshToken = new UserRefreshToken
+            {
+                TokenHash = refreshTokenHash,
+                User = testUser,
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            };
+
+            
+            _context.Add(testUserRefreshToken);
+            await _context.SaveChangesAsync();
+
+          
+
+            var refreshTokenDto = new RefreshTokenDto
+            {
+                RefreshToken = refreshToken
+            };
+
+
+            await _authService.RefreshTokenAsync(refreshTokenDto);
+            var result = await _authService.RefreshTokenAsync(refreshTokenDto);
+
+
+            Assert.False(result.IsSuccess);
+            
+
+            
+
+        }
+
+
+
+
+
 
 
 
